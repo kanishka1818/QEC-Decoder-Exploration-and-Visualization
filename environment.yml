@@ -1,0 +1,20 @@
+# conda env for the decoders-from-scratch track:  conda env create -f environment.yml
+name: qec-decoders
+channels: [conda-forge]
+dependencies:
+  - python=3.12
+  - numpy
+  - scipy          # MILP fallback inside our MWPM for > 20 lit detectors
+  - matplotlib
+  - networkx
+  - pillow         # GIF writer for BP animations
+  - pytest
+  - jupyterlab
+  - ipykernel
+  - ipywidgets     # notebook 03 (interactive explorer in Jupyter)
+  - pip
+  - pip:
+      - stim       # simulator: runs the circuits we write, produces the detector error model
+      - sinter     # shot scheduling for threshold sweeps (runs OUR decoders via adapters)
+      - pymatching # referee only (tests + comparison cells)
+      - ldpc>=2.3  # referee only (tests + comparison cells)

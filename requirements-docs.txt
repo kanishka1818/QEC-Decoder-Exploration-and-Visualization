@@ -1,0 +1,7 @@
+# Tools to build the documentation website (not needed to use qdec itself).
+#   pip install -r requirements-docs.txt
+#   mkdocs serve
+mkdocs>=1.6,<2
+mkdocs-material>=9.5,<10    # theme: https://squidfunk.github.io/mkdocs-material/
+mkdocs-jupyter>=0.25        # renders notebooks/*.ipynb as pages (with their saved outputs)
+mkdocstrings-python>=1.10   # API reference generated from the docstrings in qdec/

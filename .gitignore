@@ -1,0 +1,7 @@
+__pycache__/
+.ipynb_checkpoints/
+.pytest_cache/
+# documentation build (copies made by docs_hooks.py, and the built site)
+site/
+docs/notebooks/
+docs/explorer/

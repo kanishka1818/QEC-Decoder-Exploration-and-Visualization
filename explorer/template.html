@@ -1,0 +1,855 @@
+<title>Stabilizer Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: code list | drawing board with view tabs | inspector. Stacks to one column on phones.
+   Palette: graph-paper neutrals tinted toward ink-blue; X = brick red, Z = cobalt, Y = violet, syndrome = amber. */
+:root {
+  --paper: #f6f7f9; --panel: #ffffff; --ink: #1c2230; --muted: #5d6677; --rule: #dde1e8; --grid: #e9ecf1;
+  --x: #c4424f; --z: #2a62c9; --y: #8152c2; --lit: #f0a202; --chain: #b06a00; --ok: #2f8a4f; --bad: #c4424f; --sel: #1c2230;
+  --xbg: #f6dde0; --zbg: #dbe5f7; --ybg: #e9def6; --litbg: #fdecc4;
+  --heat0: #ffffff; --heat1: #c4424f;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #12151c; --panel: #1a1f29; --ink: #e6e9ef; --muted: #9aa3b5; --rule: #2b3240; --grid: #1f2530;
+  --x: #ec6b75; --z: #6d9bf2; --y: #ad86ea; --lit: #ffc23d; --chain: #ffb547; --ok: #57c27c; --bad: #ec6b75; --sel: #ffffff;
+  --xbg: #45252b; --zbg: #22324f; --ybg: #352a4a; --litbg: #4a3a12;
+  --heat0: #1a1f29; --heat1: #ec6b75; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #12151c; --panel: #1a1f29; --ink: #e6e9ef; --muted: #9aa3b5; --rule: #2b3240; --grid: #1f2530;
+  --x: #ec6b75; --z: #6d9bf2; --y: #ad86ea; --lit: #ffc23d; --chain: #ffb547; --ok: #57c27c; --bad: #ec6b75; --sel: #ffffff;
+  --xbg: #45252b; --zbg: #22324f; --ybg: #352a4a; --litbg: #4a3a12;
+  --heat0: #1a1f29; --heat1: #ec6b75; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 28px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 14px; }
+header h1 { font-size: 1.7rem; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); max-width: 72ch; }
+.app { display: grid; grid-template-columns: 220px minmax(0, 1fr) 330px; gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .app { grid-template-columns: 200px minmax(0, 1fr); } .inspector { grid-column: 1 / -1; } }
+@media (max-width: 720px) { .app { grid-template-columns: minmax(0, 1fr); } }
+.box { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; }
+
+/* code list */
+.codes { padding: 10px; display: flex; flex-direction: column; gap: 12px; max-height: 82vh; overflow: auto; }
+.fam h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 4px; }
+.fam button { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left; background: none;
+  border: 0; border-radius: 6px; padding: 5px 7px; color: var(--ink); font: inherit; font-size: 0.9rem; cursor: pointer; }
+.fam button span:last-child { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.fam button:hover { background: var(--grid); }
+.fam button[aria-current="true"] { background: var(--ink); color: var(--panel); }
+.fam button[aria-current="true"] span:last-child { color: var(--panel); opacity: 0.8; }
+@media (max-width: 720px) {
+  .codes { max-height: none; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding: 8px; }
+  .fam { display: flex; gap: 4px; flex: 0 0 auto; } .fam h3 { display: none; }
+  .fam button { width: auto; white-space: nowrap; border: 1px solid var(--rule); } .fam button span:last-child { display: none; }
+}
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--z); outline-offset: 2px; }
+
+/* board */
+.board { padding: 10px; min-width: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tabs button, .chip { font: 600 0.82rem var(--font-body); border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+  border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.anclabel { font-family: var(--font-mono); font-weight: 700; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+.toolbar label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+.modes { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.modes button { font: 600 0.82rem var(--font-body); border: 0; border-right: 1px solid var(--rule); background: var(--panel);
+  color: var(--ink); padding: 5px 11px; cursor: pointer; }
+.modes button:last-child { border-right: 0; }
+.modes button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.modes button .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.stage { position: relative; background:
+  linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+  linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px, var(--panel);
+  border-radius: 8px; border: 1px solid var(--rule); overflow: hidden; }
+.stage svg { display: block; width: 100%; height: min(66vh, 640px); touch-action: none; cursor: grab; }
+.stage.pen svg { cursor: crosshair; }
+.hint { font-size: 0.82rem; color: var(--muted); margin: 6px 0 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+
+/* svg pieces */
+.gen { cursor: pointer; }
+.gen.X { fill: var(--x); stroke: var(--x); } .gen.Z { fill: var(--z); stroke: var(--z); } .gen.mixed { fill: var(--y); stroke: var(--y); }
+.qubit { fill: var(--panel); stroke: var(--ink); cursor: pointer; }
+.qlabel { font-family: var(--font-mono); font-weight: 600; fill: var(--ink); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.letter, .loglabel { font-family: var(--font-mono); font-weight: 700; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.litmark { fill: none; stroke: var(--lit); pointer-events: none; }
+.torusbox { fill: none; stroke: var(--muted); stroke-dasharray: 0.3 0.3; }
+
+/* matrix + written panels */
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 12px; max-height: 70vh; overflow: auto; }
+.panel h3 { font-size: 1rem; margin: 4px 0 6px; }
+.mtable { border-collapse: separate; border-spacing: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.mtable th, .mtable td { min-width: 22px; height: 22px; padding: 0 3px; text-align: center; font-size: 0.75rem; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+.mtable.small th, .mtable.small td { min-width: 12px; height: 12px; font-size: 0.55rem; padding: 0; }
+.mtable thead th { position: sticky; top: 0; background: var(--panel); color: var(--muted); z-index: 2; cursor: pointer; }
+.mtable tbody th { position: sticky; left: 0; background: var(--panel); text-align: left; padding: 0 6px; white-space: nowrap; color: var(--muted); z-index: 1; cursor: pointer; }
+.mtable td.X { background: var(--xbg); color: var(--x); } .mtable td.Z { background: var(--zbg); color: var(--z); } .mtable td.Y { background: var(--ybg); color: var(--y); }
+.mtable td.one { font-weight: 700; }
+.mtable tr.lit th, .mtable tr.lit td.syn { background: var(--litbg); color: var(--ink); }
+.mtable tr.sel th { outline: 2px solid var(--ink); outline-offset: -2px; }
+.mtable th.errX { background: var(--x); color: #fff; } .mtable th.errZ { background: var(--z); color: #fff; } .mtable th.errY { background: var(--y); color: #fff; }
+.mtable td.syn { font-weight: 700; border-left: 2px solid var(--rule); }
+.written section { margin-bottom: 18px; }
+.written p { margin: 0 0 8px; max-width: 75ch; }
+.written pre { font-family: var(--font-mono); font-size: 0.78rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 10px; overflow: auto; max-height: 340px; margin: 0; line-height: 1.45; }
+.copyrow { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+
+/* inspector */
+.inspector { padding: 14px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.inspector h2 { font-size: 1.25rem; }
+.params { font-family: var(--font-mono); font-size: 1rem; color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.stats div { background: var(--paper); border-radius: 6px; padding: 6px 8px; }
+.stats b { display: block; font: 700 1.05rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.stats span { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.section h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
+.pauli { font-family: var(--font-mono); font-size: 0.85rem; word-break: break-all; background: var(--paper); border-radius: 6px; padding: 6px 8px; }
+.pauli .X { color: var(--x); font-weight: 600; } .pauli .Z { color: var(--z); font-weight: 600; } .pauli .Y { color: var(--y); font-weight: 600; } .pauli .I { color: var(--muted); opacity: 0.6; }
+.errlist { display: flex; flex-wrap: wrap; gap: 6px; }
+.errchip { display: inline-flex; align-items: center; gap: 4px; font: 600 0.82rem var(--font-mono); border-radius: 999px; padding: 2px 4px 2px 9px; color: #fff; }
+.errchip.X { background: var(--x); } .errchip.Z { background: var(--z); } .errchip.Y { background: var(--y); }
+.errchip button { border: 0; background: rgba(255,255,255,0.25); color: #fff; border-radius: 999px; width: 18px; height: 18px; line-height: 16px; cursor: pointer; font-size: 0.75rem; padding: 0; }
+.verdict { font-weight: 700; } .verdict.ok { color: var(--ok); } .verdict.bad { color: var(--bad); }
+.refs { padding-left: 18px; margin: 4px 0 0; font-size: 0.82rem; color: var(--muted); }
+.small { font-size: 0.85rem; color: var(--muted); margin: 0; }
+select { font: inherit; font-size: 0.85rem; border: 1px solid var(--rule); border-radius: 6px; padding: 3px 6px; background: var(--panel); color: var(--ink); }
+.presets { display: flex; flex-direction: column; gap: 5px; }
+.presets button, .steps button { text-align: left; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); color: var(--ink);
+  font: inherit; font-size: 0.85rem; padding: 5px 9px; cursor: pointer; width: 100%; }
+.steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; counter-reset: st; }
+.steps button { display: flex; gap: 8px; align-items: baseline; }
+.steps button::before { counter-increment: st; content: counter(st); font: 700 0.72rem var(--font-mono); color: var(--muted); min-width: 1.2em; }
+.steps button[aria-current="true"] { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--lit); font-weight: 600; }
+.steps button.later { color: var(--muted); }
+.steptext { background: var(--paper); border-radius: 8px; padding: 8px 10px; margin: 0; }
+.stepnav { display: flex; gap: 6px; margin-top: 8px; }
+.stepnav button { flex: 1; }
+.chip:disabled { opacity: 0.45; cursor: default; }
+.player { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.player input[type=range] { flex: 1 1 160px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header>
+  <h1>Stabilizer Atlas</h1>
+  <p>Sixteen codes from repetition to the gross code, drawn from their geometry. Put errors on qubits and watch which checks light up, read every stabilizer as a face, a matrix row or a polynomial, and see the logical operators as strings across the code.</p>
+</header>
+
+<div class="app">
+  <nav class="box codes" id="codeList" aria-label="Codes"></nav>
+
+  <main class="box board">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-lattice" aria-selected="true">Lattice</button>
+      <button role="tab" id="tab-tanner" aria-selected="false">Tanner graph</button>
+      <button role="tab" id="tab-matrix" aria-selected="false">Check matrix</button>
+      <button role="tab" id="tab-written" aria-selected="false">How it’s written</button>
+      <button role="tab" id="tab-decode" aria-selected="false">Decode</button>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <button class="chip" id="inspectBtn" type="button" aria-pressed="true" title="When on, clicking a face, line or square shows that stabilizer">Inspect</button>
+      <button class="chip" id="clearErr" type="button">Clear errors</button>
+      <label>logical <select id="logSel"><option value="">none</option></select></label>
+      <label><input type="checkbox" id="showX" checked> X checks</label>
+      <label><input type="checkbox" id="showZ" checked> Z checks</label>
+      <label><input type="checkbox" id="showChains" checked> error strings</label>
+      <label><input type="checkbox" id="showAnc"> check (ancilla) qubits</label>
+      <label><input type="checkbox" id="showLabels"> qubit numbers</label>
+      <button class="chip" id="resetView" type="button">Reset view</button>
+    </div>
+
+    <div class="stage" id="stage"><svg id="svg" role="img" aria-label="Code drawing"></svg></div>
+    <div class="panel" id="matrixPanel" hidden></div>
+    <div class="panel written" id="writtenPanel" hidden></div>
+
+    <div class="legend" id="legend">
+      <span><i style="background:var(--x)"></i>X stabilizer</span>
+      <span><i style="background:var(--z)"></i>Z stabilizer</span>
+      <span><i style="background:var(--y)"></i>mixed (non-CSS)</span>
+      <span><i style="border:2px dashed var(--z)"></i>Z check on an X face (colour code)</span>
+      <span><i style="background:var(--lit)"></i>lit check</span>
+      <span><i style="background:var(--chain)"></i>error string</span>
+      <span class="declegend"><i style="border:2px solid var(--ok);border-radius:50%"></i>correction</span>
+      <span class="declegend"><i style="border-top:3px dashed var(--ok);height:0;border-radius:0"></i>matched path</span>
+      <span class="declegend"><i style="background:linear-gradient(90deg,var(--heat0),var(--heat1));border:1px solid var(--rule)"></i>BP: chance it flipped</span>
+    </div>
+    <p class="hint" id="hint"></p>
+    <div id="playerWrap" hidden>
+      <div class="player">
+        <button class="chip" id="playBtn" type="button">Play</button>
+        <input type="range" id="iterSlider" min="0" max="0" value="0" aria-label="iteration">
+        <span class="mono" id="iterLabel"></span>
+      </div>
+      <svg id="spark" width="100%" height="70" aria-label="unsatisfied checks per iteration"></svg>
+    </div>
+  </main>
+
+  <aside class="box inspector" id="inspector" aria-live="polite"></aside>
+</div>
+
+<script>
+/*__DECODERS_JS__*/
+</script>
+<script>
+const ATLAS = /*__ATLAS_DATA__*/null;
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const SUB = (n) => String(n).split("").map((d) => "₀₁₂₃₄₅₆₇₈₉"[+d]).join("");
+
+const state = { code: null, view: "lattice", inspect: true, sel: null, err: {}, logical: null,
+                dec: { decoder: "auto", step: 0, key: "", run: null }, iter: 0, timer: null, vb: null };
+
+// ---------- geometry helpers (mirror of qdec/views.py) ----------
+function nearest(code, origin, p) {
+  if (!code.period) return p;
+  const P = code.period;
+  return [0, 1].map((i) => origin[i] + ((((p[i] - origin[i]) + P[i] / 2) % P[i] + P[i]) % P[i]) - P[i] / 2);
+}
+function facePoints(code, i) {
+  const g = code.gens[i], c = code.checks[i];
+  const pts = g.support.map((q) => nearest(code, c, code.qubits[q]));
+  if (pts.length === 2) {
+    const mid = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2];
+    if (Math.hypot(mid[0] - c[0], mid[1] - c[1]) > 1e-6) return [pts[0], [c[0] + (c[0] - mid[0]) * 0.3, c[1] + (c[1] - mid[1]) * 0.3], pts[1]];
+    return pts;
+  }
+  const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  return pts.slice().sort((a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx));
+}
+function bounds(code) {
+  if (code.period) return [-1.5, -1.5, code.period[0] + 1.5, code.period[1] + 1.5];
+  const all = code.qubits.concat(code.checks);
+  const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+  return [Math.min(...xs) - 1.6, Math.min(...ys) - 1.6, Math.max(...xs) + 1.6, Math.max(...ys) + 1.6];
+}
+const qr = (code) => code.n <= 13 ? 0.42 : code.n <= 60 ? 0.32 : 0.24;
+
+// ---------- Pauli algebra in the browser ----------
+const anti = (a, b) => (a !== "I" && b !== "I" && a !== b);
+function syndrome(code, err) {
+  return code.gens.map((g) => { let s = 0; g.support.forEach((q, j) => { if (err[q] && anti(err[q], g.letters[j])) s ^= 1; }); return s; });
+}
+function mul(a, b) { if (!a || a === "I") return b || "I"; if (!b || b === "I") return a; if (a === b) return "I"; return "XYZ".replace(a, "").replace(b, ""); }
+function isLogicalError(code, residual) {
+  return code.logicals.some((L) => ["x", "z"].some((t) => { let s = 0; L[t].forEach(([q, l]) => { if (residual[q] && anti(residual[q], l)) s ^= 1; }); return s; }));
+}
+
+// ---------- code list ----------
+function buildList() {
+  const fams = {};
+  ATLAS.codes.forEach((c, i) => { (fams[c.family] = fams[c.family] || []).push(i); });
+  Object.entries(fams).forEach(([fam, idx]) => {
+    const div = document.createElement("div"); div.className = "fam";
+    div.innerHTML = `<h3>${esc(fam)}</h3>`;
+    idx.forEach((i) => {
+      const c = ATLAS.codes[i];
+      const b = document.createElement("button"); b.type = "button"; b.dataset.i = i;
+      b.innerHTML = `<span>${esc(c.name.replace(/\s*\[\[.*\]\]/, ""))}</span><span>${esc(c.params)}</span>`;
+      b.onclick = () => selectCode(i);
+      div.appendChild(b);
+    });
+    $("codeList").appendChild(div);
+  });
+}
+
+function selectCode(i, keepErr) {
+  state.code = ATLAS.codes[i]; state.sel = null; state.logical = null;
+  if (!keepErr) { state.err = {}; state.dec.decoder = "auto"; }
+  state.dec.key = ""; stopPlay();
+  document.querySelectorAll(".fam button").forEach((b) => b.setAttribute("aria-current", String(+b.dataset.i === i)));
+  const ls = $("logSel"); ls.innerHTML = '<option value="">none</option>';
+  state.code.logicals.forEach((_, k) => {
+    ls.insertAdjacentHTML("beforeend", `<option value="${k}:x">X̄${SUB(k)} (X-type)</option><option value="${k}:z">Z̄${SUB(k)} (Z-type)</option><option value="${k}:both">X̄${SUB(k)} and Z̄${SUB(k)}</option>`);
+  });
+  $("showLabels").checked = state.code.n <= 41;
+  state.vb = null;
+  render();
+}
+
+// ---------- render dispatcher ----------
+function render() {
+  const code = state.code; if (!code) return;
+  const v = state.view;
+  $("stage").hidden = !(v === "lattice" || v === "tanner" || v === "decode");
+  $("matrixPanel").hidden = v !== "matrix";
+  $("writtenPanel").hidden = v !== "written";
+  if (v === "decode") ensureDecode();
+  const st = v === "decode" ? curStep() : null;
+  $("playerWrap").hidden = !(st && st.ov.bp);
+  $("toolbar").style.display = v === "written" ? "none" : "flex";
+  document.querySelectorAll(".declegend").forEach((e) => (e.style.display = v === "decode" ? "" : "none"));
+  $("legend").style.display = (v === "matrix" || v === "written") ? "none" : "flex";
+  $("hint").textContent = hintText();
+  if (v === "matrix") drawMatrix();
+  else if (v === "written") drawWritten();
+  else drawBoard();
+  renderInspector();
+}
+function hintText() {
+  if (state.view === "written") return "";
+  if (state.view === "decode") return "Click qubits to put errors on them (I → X → Z → Y), or pick an example on the right. Then step through what the decoder does with Next.";
+  const errs = "Click a qubit to put an error on it: each click cycles I → X → Z → Y → I.";
+  const insp = state.inspect ? " With Inspect on, click a face, line or square to read that stabilizer." : "";
+  return state.view === "matrix" ? "Click a column header (a qubit) to cycle its error: I → X → Z → Y → I." + (state.inspect ? " Click a row to select that stabilizer." : "")
+    : errs + insp + " Drag to pan, scroll or pinch to zoom.";
+}
+
+// ---------- lattice / Tanner / replay drawing ----------
+function drawBoard() {
+  const code = state.code, svg = $("svg");
+  svg.innerHTML = "";
+  const b = bounds(code);
+  if (!state.vb) state.vb = [b[0], b[1], b[2] - b[0], b[3] - b[1]];
+  svg.setAttribute("viewBox", state.vb.join(" "));
+  const root = el("g", {}, svg);
+  if (code.period) el("rect", { x: -0.5, y: -0.5, width: code.period[0], height: code.period[1], class: "torusbox", "stroke-width": 0.04 }, root);
+
+  // Decode tab: the current step's overlay (graph, matched paths, BP beliefs, correction, residual)
+  const st = state.view === "decode" ? curStep() : null;
+  const ov = st ? st.ov : {};
+  const shown = ov.residual || state.err;                    // the final step shows what is LEFT after correcting
+  const syn = syndrome(code, shown);
+  const showX = $("showX").checked, showZ = $("showZ").checked;
+  const big = code.n > 60;
+  const xSupp = new Set(code.gens.filter((g) => g.kind === "X").map((g) => g.support.join(",")));
+  const r = qr(code);
+
+  // stabilizers
+  code.gens.forEach((g, i) => {
+    const visible = g.kind === "mixed" || (g.kind === "X" ? showX : showZ) || state.sel === i;
+    if (!visible) return;
+    if (ov.focus && g.kind !== ov.focus && g.kind !== "mixed") return;   // decoding one error type: hide the checks that cannot see it
+    const sel = state.sel === i;
+    const c = code.checks[i];
+    const pick = (ev) => { ev.stopPropagation(); if (!state.inspect) return; state.sel = sel ? null : i; render(); };
+    if (state.view === "tanner" || g.shape === "star") {
+      const grp = el("g", { class: "gen " + g.kind }, root);
+      g.support.forEach((q) => { const p = nearest(code, c, code.qubits[q]);
+        el("line", { x1: c[0], y1: c[1], x2: p[0], y2: p[1], "stroke-width": sel ? 0.12 : big ? 0.03 : 0.05, "stroke-opacity": sel ? 0.95 : big ? 0.18 : 0.5 }, grp); });
+      const s = sel ? 0.5 : big ? 0.28 : 0.34;
+      el("rect", { x: c[0] - s / 2, y: c[1] - s / 2, width: s, height: s, rx: 0.05, "stroke-width": sel ? 0.08 : 0, stroke: sel ? css("--sel") : "none" }, grp);
+      grp.onclick = pick;
+    } else {
+      const pts = facePoints(code, i);
+      let shape;
+      if (pts.length === 2) shape = el("line", { x1: pts[0][0], y1: pts[0][1], x2: pts[1][0], y2: pts[1][1], class: "gen " + g.kind, "stroke-width": 0.5, "stroke-linecap": "round", "stroke-opacity": sel ? 0.85 : 0.35 }, root);
+      else if (g.kind === "Z" && showX && xSupp.has(g.support.join(",")) && !sel) {
+        const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+        shape = el("polygon", { points: pts.map((p) => [p[0] * 0.88 + cx * 0.12, p[1] * 0.88 + cy * 0.12].join(",")).join(" "),
+          class: "gen Z", "fill-opacity": 0.04, "stroke-width": 0.09, "stroke-dasharray": "0.25 0.15" }, root);
+      } else shape = el("polygon", { points: pts.map((p) => p.join(",")).join(" "), class: "gen " + g.kind, "fill-opacity": sel ? 0.75 : 0.3, "stroke-width": sel ? 0.1 : 0.03, stroke: sel ? css("--sel") : null }, root);
+      shape.onclick = pick;
+    }
+  });
+
+  // error strings: an X error (or Y) and another one under the same Z check are joined
+  // THROUGH that check - the check sees two flips, stays dark, and the string carries on.
+  if ($("showChains").checked && !ov.residual && !ov.bp) drawChains(root, code);
+
+  // lit checks
+  const lit = syn.map((s, i) => s ? i : -1).filter((i) => i >= 0);
+  const anc = $("showAnc").checked || state.view === "decode";   // decoding: always show the ancillas it reads
+  if (!anc) lit.forEach((i) => { const c = code.checks[i];
+    el("circle", { cx: c[0], cy: c[1], r: r * 1.25, class: "litmark", "stroke-width": 0.16 }, root);
+    el("circle", { cx: c[0], cy: c[1], r: r * 0.45, fill: css("--lit") }, root); });
+
+  if (ov.graph) drawGraph(root, code, ov.graph);
+  if (anc) drawAncillas(root, code, new Set(lit), ov.focus);
+  if (ov.pairs) drawMatching(root, code, ov.pairs, ov.pairNow);
+  if (state.logical) drawLogical(root, code);
+
+  // qubits
+  // BP steps colour qubits by belief: the chance BP gives that the qubit flipped
+  const bpIt = ov.bp ? Math.min(state.iter, ov.bp.probs.length - 1) : 0;
+  const probs = ov.bp ? ov.bp.probs[bpIt] : ov.avgProbs || null;
+  const guess = ov.bp ? ov.bp.guess[bpIt] : null;
+  const pc = (l) => l === "X" ? css("--x") : l === "Z" ? css("--z") : css("--y");
+  code.qubits.forEach((p, q) => {
+    let fill = css("--panel");
+    if (probs) fill = heat(probs[q]);
+    else if (shown[q]) fill = pc(shown[q]);
+    const circ = el("circle", { cx: p[0], cy: p[1], r, class: "qubit", "stroke-width": 0.05 }, root);
+    circ.style.fill = fill;                                     // inline style beats the .qubit CSS rule
+    circ.onclick = (ev) => { ev.stopPropagation(); clickQubit(q); };
+    if (probs && state.err[q]) {                                // under the heat colours, mark the true error with a cross
+      const k = r * 0.6; const g = el("g", { stroke: css("--ink"), "stroke-width": 0.09, "pointer-events": "none" }, root);
+      el("line", { x1: p[0] - k, y1: p[1] - k, x2: p[0] + k, y2: p[1] + k }, g); el("line", { x1: p[0] - k, y1: p[1] + k, x2: p[0] + k, y2: p[1] - k }, g);
+    }
+    if (guess && guess[q]) el("circle", { cx: p[0], cy: p[1], r: r * 1.45, fill: "none", stroke: css("--z"), "stroke-width": 0.08, "stroke-dasharray": "0.12 0.08", "pointer-events": "none" }, root);
+    if (ov.ranked && ov.ranked.has(q)) {                       // OSD: the qubits BP trusts most, numbered in OSD's order
+      el("rect", { x: p[0] - r * 1.4, y: p[1] - r * 1.4, width: r * 2.8, height: r * 2.8, rx: r * 0.4, fill: "none", stroke: css("--ink"), "stroke-width": 0.07, "pointer-events": "none" }, root);
+      const t = el("text", { x: p[0] + r * 1.55, y: p[1] - r * 1.45, class: "letter", "font-size": r * 1.25 }, root); t.style.fill = css("--ink"); t.textContent = ov.ranked.get(q);
+    }
+    if (ov.corr && ov.corr[q]) {                                // correction: green ring + the Pauli the decoder applies
+      el("circle", { cx: p[0], cy: p[1], r: r * 1.5, fill: "none", stroke: css("--ok"), "stroke-width": 0.11, "pointer-events": "none" }, root);
+      const t = el("text", { x: p[0] - r * 1.25, y: p[1] - r * 1.3, class: "letter", "font-size": r * 1.3 }, root);
+      t.style.fill = css("--ok"); t.textContent = ov.corr[q];
+    }
+    if ($("showLabels").checked && !probs) {
+      const t = el("text", { x: p[0], y: p[1], class: "qlabel", "font-size": r * 1.15 }, root); t.textContent = q;
+      if (shown[q]) t.style.fill = "#ffffff";
+    } else if (shown[q] && !probs) {
+      const t = el("text", { x: p[0], y: p[1], class: "qlabel", "font-size": r * 1.15 }, root); t.textContent = shown[q]; t.style.fill = "#ffffff";
+    }
+  });
+
+  // letters of the selected stabilizer
+  if (state.sel !== null) {
+    const g = code.gens[state.sel];
+    g.support.forEach((q, j) => { const p = code.qubits[q]; const l = g.letters[j];
+      const t = el("text", { x: p[0] + r * 1.15, y: p[1] - r * 1.15, class: "letter", "font-size": r * 1.6 }, root);
+      t.style.fill = l === "X" ? css("--x") : l === "Z" ? css("--z") : css("--y"); t.textContent = l; });
+  }
+  svg.onclick = () => { if (state.sel !== null && state.inspect) { state.sel = null; render(); } };
+}
+
+function drawChains(root, code) {
+  const r = qr(code);
+  [["X", "Z"], ["Z", "X"]].forEach(([errType, checkKind]) => {
+    const hit = (q) => state.err[q] && (state.err[q] === errType || state.err[q] === "Y");
+    code.gens.forEach((g, i) => {
+      if (g.kind !== checkKind) return;
+      const qs = g.support.filter(hit);
+      if (qs.length < 2) return;
+      const c = code.checks[i];
+      qs.forEach((q) => { const p = nearest(code, c, code.qubits[q]);
+        el("line", { x1: p[0], y1: p[1], x2: c[0], y2: c[1], stroke: css("--chain"), "stroke-width": r * 0.38, "stroke-linecap": "round", "stroke-opacity": 0.85 }, root); });
+      el("circle", { cx: c[0], cy: c[1], r: r * 0.28, fill: css("--chain") }, root);
+    });
+  });
+}
+
+// Each check is measured by its own ancilla qubit, sitting at the check's position
+// (exactly where qdec.circuits puts it in the Stim circuit). It reads 1 when the
+// check is lit - those readings are ALL the decoder ever sees.
+function drawAncillas(root, code, litSet, focus) {
+  const r = qr(code) * 0.78;
+  code.gens.forEach((g, i) => {
+    if (g.kind !== "mixed" && !(g.kind === "X" ? $("showX").checked : $("showZ").checked)) return;
+    if (focus && g.kind !== focus) return;                    // decoding one error type: only the checks that see it
+    const c = code.checks[i], on = litSet.has(i);
+    const colour = g.kind === "X" ? css("--x") : g.kind === "Z" ? css("--z") : css("--y");
+    const d = el("rect", { x: c[0] - r, y: c[1] - r, width: 2 * r, height: 2 * r, rx: r * 0.25,
+      transform: `rotate(45 ${c[0]} ${c[1]})`, "stroke-width": r * 0.22 }, root);
+    d.style.fill = on ? css("--lit") : css("--panel"); d.style.stroke = colour;
+    const t = el("text", { x: c[0], y: c[1], class: "anclabel", "font-size": r * 0.95 }, root);
+    t.style.fill = on ? css("--ink") : colour; t.textContent = on ? "1" : "0";
+  });
+}
+
+function drawLogical(root, code) {
+  const [k, which] = state.logical.split(":");
+  const L = code.logicals[+k], r = qr(code);
+  const parts = which === "both" ? ["x", "z"] : [which];
+  parts.forEach((t) => {
+    const path = L[t + "_path"], colour = t === "x" ? css("--x") : css("--z");
+    const label = (t === "x" ? "X̄" : "Z̄") + SUB(k);
+    const off = which === "both" ? (t === "x" ? -0.18 : 0.18) : 0;
+    if (path.string) {
+      let prev = code.qubits[path.order[0]];
+      const pts = [prev];
+      path.order.slice(1).forEach((q) => { const p = nearest(code, prev, code.qubits[q]); pts.push(p); prev = p; });
+      el("polyline", { points: pts.map((p) => `${p[0] + off},${p[1] + off}`).join(" "), fill: "none", stroke: colour,
+        "stroke-width": r * 0.55, "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-opacity": 0.9 }, root);
+      const a = pts[0], z = pts[pts.length - 1];
+      const dx = z[0] - a[0], dy = z[1] - a[1], len = Math.hypot(dx, dy) || 1;
+      const lx = a[0] - dx / len * r * 3, ly = a[1] - dy / len * r * 3;
+      const tx = el("text", { x: lx + off, y: ly + off, class: "loglabel", "font-size": r * 2.2 }, root); tx.style.fill = colour; tx.textContent = label;
+    } else {
+      path.order.forEach((q) => { const p = code.qubits[q];
+        el("circle", { cx: p[0] + off, cy: p[1] + off, r: r * 1.5, fill: "none", stroke: colour, "stroke-width": r * 0.35 }, root); });
+      const p0 = code.qubits[path.order[0]];
+      const tx = el("text", { x: p0[0] + off, y: p0[1] - r * 3, class: "loglabel", "font-size": r * 2.4 }, root); tx.style.fill = colour; tx.textContent = label;
+    }
+  });
+}
+
+function heat(p) {
+  const ca = parseHex(css("--heat0")), cb = parseHex(css("--heat1"));
+  const t = Math.sqrt(Math.min(1, Math.max(0, p)));      // square-root scale: small probabilities stay visible
+  return `rgb(${ca.map((v, i) => Math.round(v + (cb[i] - v) * t)).join(",")})`;
+}
+function parseHex(h) { h = h.replace("#", ""); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); }
+
+// The matching graph of one check type: every qubit is an edge between the (one or
+// two) checks that contain it; a qubit in only one check is an edge to the boundary.
+function drawGraph(root, code, edges) {
+  const r = qr(code);
+  edges.forEach((e) => {
+    const a = code.checks[e.ends[0]], q = nearest(code, a, code.qubits[e.qubits[0]]);
+    const pts = [a, q];
+    if (e.ends[1] !== null) pts.push(nearest(code, q, code.checks[e.ends[1]]));
+    else pts.push([q[0] + (q[0] - a[0]) * 0.55, q[1] + (q[1] - a[1]) * 0.55]);     // stub towards the boundary
+    el("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: css("--muted"), "stroke-width": r * 0.18, "stroke-opacity": 0.55, "pointer-events": "none" }, root);
+  });
+}
+function drawMatching(root, code, pairs, now) {
+  pairs.forEach((pr, idx) => {
+    const pts = [code.checks[pr.a]];
+    let last = code.checks[pr.a];
+    pr.qubits.forEach((q) => { const p = nearest(code, last, code.qubits[q]); pts.push(p); last = p; });
+    if (pr.b !== null) pts.push(nearest(code, last, code.checks[pr.b]));
+    if (pr.b === null && pts.length > 1) { const a = pts[pts.length - 2], z = pts[pts.length - 1]; pts.push([z[0] + (z[0] - a[0]) * 0.5, z[1] + (z[1] - a[1]) * 0.5]); }
+    if (pr.b === null && pts.length === 1) pts.push([pts[0][0], pts[0][1] - 0.6]);
+    el("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: css("--ok"), "stroke-width": idx === now ? 0.24 : 0.16,
+      "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-dasharray": "0.35 0.18", "pointer-events": "none" }, root);
+  });
+}
+
+// ---------- errors ----------
+function clickQubit(q) {
+  // implicit cycling, as in the first version: I -> X -> Z -> Y -> I
+  const order = ["I", "X", "Z", "Y"];
+  const next = order[(order.indexOf(state.err[q] || "I") + 1) % 4];
+  if (next === "I") delete state.err[q]; else state.err[q] = next;
+  render(); syncPlayer();
+}
+function flash(msg) { $("hint").textContent = msg; }
+
+// ---------- check matrix (a real table) ----------
+function drawMatrix() {
+  const code = state.code, box = $("matrixPanel");
+  const syn = syndrome(code, state.err);
+  const small = code.n > 41 ? " small" : "";
+  const head = (cols) => "<thead><tr><th></th>" + cols.map((q) => `<th data-q="${q}" class="${state.err[q] ? "err" + state.err[q] : ""}" title="qubit ${q}">${q}</th>`).join("") + "<th title=\"syndrome bit\">s</th></tr></thead>";
+  const cols = [...Array(code.n).keys()];
+  const row = (i) => {
+    const g = code.gens[i]; const word = Array(code.n).fill("");
+    g.support.forEach((q, j) => (word[q] = g.letters[j]));
+    const cells = cols.map((q) => {
+      const l = word[q];
+      if (!l) return "<td></td>";
+      return code.is_css ? `<td class="${l} one">1</td>` : `<td class="${l} one">${l}</td>`;
+    }).join("");
+    return `<tr data-i="${i}" class="${syn[i] ? "lit" : ""} ${state.sel === i ? "sel" : ""}"><th>S${i} · ${g.kind === "mixed" ? "XZ" : g.kind}</th>${cells}<td class="syn">${syn[i]}</td></tr>`;
+  };
+  let h = "";
+  if (code.is_css) {
+    const xs = code.gens.map((g, i) => g.kind === "X" ? i : -1).filter((i) => i >= 0);
+    const zs = code.gens.map((g, i) => g.kind === "Z" ? i : -1).filter((i) => i >= 0);
+    h += `<p class="small">Rows = checks, columns = qubits, 1 = the check looks at that qubit. The last column <b>s</b> is the syndrome bit for your current error. Lit rows are highlighted. Click a column header to cycle that qubit's error (I → X → Z → Y).</p>`;
+    if (xs.length) h += `<h3>H<sub>X</sub>: X checks (they see Z errors), ${xs.length} × ${code.n}</h3><table class="mtable${small}">${head(cols)}<tbody>${xs.map(row).join("")}</tbody></table>`;
+    if (zs.length) h += `<h3 style="margin-top:14px">H<sub>Z</sub>: Z checks (they see X errors), ${zs.length} × ${code.n}</h3><table class="mtable${small}">${head(cols)}<tbody>${zs.map(row).join("")}</tbody></table>`;
+  } else {
+    h += `<p class="small">Not a CSS code: each row is one check written as Pauli letters (X, Z, or Y = both). The last column <b>s</b> is the syndrome bit for your current error.</p>`;
+    h += `<table class="mtable${small}">${head(cols)}<tbody>${code.gens.map((_, i) => row(i)).join("")}</tbody></table>`;
+  }
+  box.innerHTML = h;
+  box.querySelectorAll("tbody tr").forEach((tr) => (tr.onclick = () => { if (!state.inspect) return; const i = +tr.dataset.i; state.sel = state.sel === i ? null : i; render(); }));
+  box.querySelectorAll("thead th[data-q]").forEach((th) => (th.onclick = () => clickQubit(+th.dataset.q)));
+}
+
+// ---------- how it's written ----------
+function drawWritten() {
+  const code = state.code, box = $("writtenPanel");
+  box.innerHTML = code.written.map((s, k) => `<section><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p>` +
+    (s.pre ? `<div class="copyrow"><button class="chip" type="button" data-copy="${k}">Copy</button></div><pre id="pre${k}">${esc(s.pre)}</pre>` : "") + `</section>`).join("");
+  box.querySelectorAll("button[data-copy]").forEach((b) => (b.onclick = () => {
+    const pre = $("pre" + b.dataset.copy);
+    navigator.clipboard?.writeText(pre.textContent).then(() => (b.textContent = "Copied"), () => {
+      const range = document.createRange(); range.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); b.textContent = "Selected";
+    });
+  }));
+}
+
+// ---------- inspector ----------
+function pauliHTML(str) { return [...str].map((c) => `<span class="${c}">${c}</span>`).join(""); }
+function renderInspector() {
+  const code = state.code, box = $("inspector");
+  const syn = syndrome(code, state.err);
+  const weights = code.gens.map((g) => g.support.length);
+  let h = `<div><h2>${esc(code.name)}</h2><div class="params">${esc(code.params)} · ${esc(code.family)}</div></div>
+  <div class="stats"><div><b>${code.n}</b><span>qubits n</span></div><div><b>${code.k}</b><span>logical k</span></div>
+  <div><b>${code.d ?? "?"}</b><span>distance d</span></div><div><b>${Math.min(...weights)}–${Math.max(...weights)}</b><span>check weight</span></div></div>
+  <p class="small">d: ${esc(code.d_how || "")}</p>
+  <p style="margin:0">${esc(code.description)}</p>`;
+
+  if (state.view === "decode") { box.innerHTML = h + decodePanel(); bindDecodePanel(box); return; }
+
+  // your error
+  const errQ = Object.keys(state.err).map(Number).sort((a, b) => a - b);
+  h += `<div class="section"><h3>Your error</h3>`;
+  if (!errQ.length) h += `<p class="small">No error. Click a qubit to put one on it (each click: I → X → Z → Y).</p>`;
+  else {
+    h += `<div class="errlist">${errQ.map((q) => `<span class="errchip ${state.err[q]}">${state.err[q]}${SUB(q)}<button type="button" data-rm="${q}" aria-label="remove error on qubit ${q}">×</button></span>`).join("")}</div>`;
+    const litIdx = syn.map((s, i) => s ? i : -1).filter((i) => i >= 0);
+    h += `<p style="margin:8px 0 0">${litIdx.length ? `<b>${litIdx.length}</b> of ${code.m} checks light up: ${litIdx.map((i) => "S" + i).join(", ")}.` : "<b>No check lights up.</b>"}</p>`;
+    if (!litIdx.length) {
+      const res = {}; errQ.forEach((q) => (res[q] = state.err[q]));
+      h += isLogicalError(code, res)
+        ? `<p style="margin:4px 0 0"><span class="verdict bad">This error is a logical operator.</span> No check sees it, but it changes the encoded state. Its weight here is ${errQ.length}; the code distance is ${code.d}.</p>`
+        : `<p style="margin:4px 0 0"><span class="verdict ok">This error is a stabilizer</span> (or a product of them): it does nothing to the encoded state. This is degeneracy.</p>`;
+    } else if (code.lookup) {
+      const corr = code.lookup[syn.join("")];
+      if (!corr) h += `<p class="small">Lookup decoder: no error of weight ≤ ${code.n <= 9 ? 3 : 2} gives this syndrome, so it is not in the table.</p>`;
+      else {
+        const residual = {}; for (let q = 0; q < code.n; q++) { const rr = mul(state.err[q], corr[q]); if (rr !== "I") residual[q] = rr; }
+        const bad = isLogicalError(code, residual);
+        const cq = Object.keys(corr);
+        const same = cq.length === errQ.length && cq.every((q) => corr[q] === state.err[q]);
+        h += `<p style="margin:6px 0 0">Lookup decoder applies ${cq.map((q) => `<span class="mono">${corr[q]}${SUB(q)}</span>`).join(" ")}: <span class="verdict ${bad ? "bad" : "ok"}">${bad ? "logical error" : "corrected"}</span>${!bad && !same ? " (a different but equivalent correction: degeneracy)" : ""}.</p>`;
+      }
+    } else h += `<p class="small">Too big for a lookup table. Open the <b>Decode</b> tab to watch MWPM or BP+OSD correct this error step by step.</p>`;
+    if ($("showChains").checked && code.is_css) h += `<p class="small" style="margin-top:6px">Orange lines join errors that share a check. That check sees two flips and stays dark, so only the ends of a string light up.</p>`;
+  }
+  h += `</div>`;
+
+  // stabilizer
+  if (state.sel !== null) {
+    const g = code.gens[state.sel];
+    const word = Array(code.n).fill("I"); g.support.forEach((q, j) => (word[q] = g.letters[j]));
+    h += `<div class="section"><h3>Stabilizer S${state.sel} · ${g.kind === "mixed" ? "mixed X/Z" : g.kind + "-type"} · weight ${g.support.length}</h3>
+      <div class="pauli">${g.support.map((q, j) => `<span class="${g.letters[j]}">${g.letters[j]}</span><sub>${q}</sub>`).join(" ")}</div>
+      ${code.n <= 41 ? `<div class="pauli" style="margin-top:4px">${pauliHTML(word.join(""))}</div>` : ""}
+      ${syn[state.sel] ? `<p class="small" style="margin-top:4px">Your error flips this check (it anticommutes with it).</p>` : ""}</div>`;
+  } else h += `<div class="section"><h3>Stabilizer</h3><p class="small">${state.inspect ? "Click a face, line or square (or a row in the Check matrix tab)." : "Turn on <b>Inspect</b> to read a stabilizer by clicking it."}</p></div>`;
+  if ($("showAnc").checked) h += `<div class="section"><h3>Check (ancilla) qubits</h3><p class="small">Each diamond is the ancilla qubit that measures one check (red: X check, blue: Z check). It reads <b>1</b> when your error flips that check. These readings, the syndrome, are all a decoder ever gets: it never sees the data qubits. In a real circuit the ancillas are re-measured every round and can be wrong too, so the decoder works with “this ancilla changed since last round” (detectors) instead.</p></div>`;
+
+  // logical
+  if (state.logical) {
+    const [k] = state.logical.split(":"); const L = code.logicals[+k];
+    h += `<div class="section"><h3>Logical pair ${k}</h3><div class="pauli">X̄${SUB(k)} = ${L.x.map(([q, l]) => `<span class="${l}">${l}</span><sub>${q}</sub>`).join(" ")}<br>Z̄${SUB(k)} = ${L.z.map(([q, l]) => `<span class="${l}">${l}</span><sub>${q}</sub>`).join(" ")}</div>
+      <p class="small" style="margin-top:4px">${L.x_path.string ? "On this code a logical is a string across the patch (or around the torus): it passes every check, so no check can see it." : "On this code a logical is spread over distant qubits, not a string."} X̄ and Z̄ share an odd number of qubits, so they anticommute. Try it: add X on every qubit of Z̄${SUB(k)}… no check lights, yet the encoded state changes.</p></div>`;
+  }
+  h += `<div class="section"><h3>References</h3><ul class="refs">${code.references.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  box.innerHTML = h;
+  box.querySelectorAll("button[data-rm]").forEach((b) => (b.onclick = () => { delete state.err[+b.dataset.rm]; render(); }));
+}
+
+// ---------- live decoding (explorer Unit 2) ----------
+// The decoders themselves are in decoders.js (global QDec), tested against qdec's
+// Python decoders. Here we only turn one run into a list of steps to click through.
+const PRESETS = [
+  { label: "Surface d=5 · three X errors, corrected", code: "surface (rotated) d=5", err: { 6: "X", 12: "X", 13: "X" }, decoder: "mwpm" },
+  { label: "Surface d=5 · a different but equivalent fix", code: "surface (rotated) d=5", err: { 0: "X", 1: "X", 2: "X" }, decoder: "mwpm" },
+  { label: "Surface d=5 · three on a line: logical error", code: "surface (rotated) d=5", err: { 0: "X", 5: "X", 10: "X" }, decoder: "mwpm" },
+  { label: "Toric 4×4 · a tie that goes the wrong way", code: "toric 4x4", err: { 2: "X", 3: "X" }, decoder: "mwpm" },
+  { label: "Toric 4×4 · BP freezes on a tie, OSD decides", code: "toric 4x4", err: { 6: "X", 25: "X" }, decoder: "bposd" },
+  { label: "Steane · one Y error, by table", code: "Steane [[7,1,3]]", err: { 3: "Y" }, decoder: "lookup" },
+  { label: "Five-qubit · non-CSS, by table", code: "five-qubit [[5,1,3]]", err: { 2: "Y" }, decoder: "lookup" },
+  { label: "Gross · BP oscillates, OSD rescues it", code: "gross [[144,12,12]]", err: { 18: "X", 79: "X", 94: "X", 117: "X" }, decoder: "bposd" },
+];
+const DEC_NAMES = { lookup: "Lookup table", mwpm: "Matching (MWPM)", bposd: "BP + OSD" };
+
+/** Which decoders can run on this code, and why not when they cannot. */
+function decoderOptions(code) {
+  const kinds = ["X", "Z"].filter((k) => QDec.rowsOf(code, k).length);
+  const graph = code.is_css && kinds.every((k) => QDec.isGraphLike(code, k));
+  return {
+    lookup: code.lookup ? "" : "only for codes with ≤ 13 qubits: the table needs one row per syndrome, 2^(checks) of them",
+    mwpm: !code.is_css ? "needs separate X and Z checks (CSS code)" : graph ? "" : "some qubit sits in 3 or more checks of one type, so one flip lights 3+ checks: that is a hyperedge, not a graph edge",
+    bposd: code.is_css ? "" : "this explorer runs BP on CSS codes only (X and Z parts separately)",
+  };
+}
+function chosenDecoder(code) {
+  const opt = decoderOptions(code), d = state.dec.decoder;
+  if (d !== "auto" && !opt[d]) return d;
+  return !opt.lookup ? "lookup" : !opt.mwpm ? "mwpm" : !opt.bposd ? "bposd" : null;
+}
+const sTxt = (list) => list.length ? list.map((i) => "S" + i).join(", ") : "none";
+const qTxt = (qs, l) => [...qs].sort((a, b) => a - b).map((q) => `<span class="mono">${l}${SUB(q)}</span>`).join(" ");
+
+/** Run the chosen decoder on the current errors and cut the run into steps. */
+function buildRun() {
+  const code = state.code, err = state.err, dec = chosenDecoder(code);
+  const errQ = Object.keys(err).map(Number);
+  const syn = syndrome(code, err), lit = syn.map((v, i) => v ? i : -1).filter((i) => i >= 0);
+  const steps = [];
+  let corr = {};
+  const snap = () => Object.assign({}, corr);
+  const addCorr = (qs, l) => qs.forEach((q) => { const m = mul(corr[q], l); if (m === "I") delete corr[q]; else corr[q] = m; });
+
+  steps.push({ title: "Syndrome", ov: {}, text: !errQ.length
+    ? "No error yet. Click qubits to put errors on them, or pick an example on the right."
+    : `${lit.length ? `<b>${lit.length}</b> ancilla${lit.length > 1 ? "s" : ""} read 1 (amber diamonds): checks ${sTxt(lit)}.` : "<b>No ancilla reads 1.</b>"} This list of 0s and 1s is all the decoder gets. It never sees the data qubits, so from here on it has to <i>guess</i> the error.` });
+  if (!errQ.length || !dec) return { dec, steps };
+
+  if (dec === "lookup") {
+    const r = QDec.lookup(code, err);
+    const has = r.correction && Object.keys(r.correction).length;
+    steps.push({ title: "Find the row", ov: {}, text: `The syndrome reads <span class="mono">${r.key}</span> (one bit per check, S0 first). The table has ${r.rows} rows, built in advance: for every syndrome, the lightest error that produces it. ${r.correction ? (has ? `This row says: apply ${Object.keys(r.correction).map((q) => `<span class="mono">${r.correction[q]}${SUB(q)}</span>`).join(" ")}.` : "This row is empty: no correction needed.") : "This syndrome is not in the table (no light enough error gives it), so the decoder gives up."}` });
+    if (r.correction) { Object.entries(r.correction).forEach(([q, l]) => addCorr([+q], l)); }
+    steps.push({ title: "Apply the correction", ov: { corr: snap() }, text: "The green rings are what the decoder applies (letters = the Pauli). Lookup is optimal for small codes but the table doubles with every extra check, which is why big codes need the decoders below." });
+  } else {
+    const { x, z } = QDec.splitError(err);
+    const parts = [{ l: "X", kind: "Z", set: x }, { l: "Z", kind: "X", set: z }].filter((pt) => pt.set.size);
+    parts.forEach((pt) => {
+      const rows = QDec.rowsOf(code, pt.kind);
+      const tag = `${pt.l} part`;
+      if (!rows.length) { steps.push({ title: `${tag}: invisible`, ov: { corr: snap() }, text: `This code has no ${pt.kind} checks, so ${pt.l} errors light nothing and cannot be corrected (the repetition code only protects against one type).` }); return; }
+      const s = QDec.syndromeOf(code, rows, pt.set);
+      if (!s.some((v) => v)) { steps.push({ title: `${tag}: nothing to do`, ov: { focus: pt.kind, corr: snap() }, text: `Your ${pt.l} errors light no ${pt.kind} check, so the decoder sees nothing and does nothing. The result step tells you whether that was harmless.` }); return; }
+      if (dec === "mwpm") {
+        const r = QDec.mwpm(code, pt.set, pt.kind);
+        steps.push({ title: `${tag}: the graph`, ov: { focus: pt.kind, graph: r.edges, corr: snap() }, text: `${pt.l} errors are seen by the ${pt.kind} checks. Make a graph: one node per ${pt.kind} check, one edge per qubit, joining the (one or two) checks it touches. An edge that leaves the patch goes to the <b>boundary</b>. A ${pt.l} error on a qubit lights the two ends of its edge, so a string of errors lights only its two ends. ${r.lit.length} node${r.lit.length > 1 ? "s are" : " is"} lit.` });
+        r.pairs.forEach((pr, i) => {
+          steps.push({ title: `${tag}: pair ${i + 1} of ${r.pairs.length}`, ov: { focus: pt.kind, graph: r.edges, pairs: r.pairs.slice(0, i + 1), pairNow: i, corr: snap() },
+            text: `${pr.b === null ? `S${pr.a} is matched to the <b>boundary</b>` : `S${pr.a} is matched with S${pr.b}`}, along ${pr.qubits.length} qubit${pr.qubits.length > 1 ? "s" : ""} (${qTxt(pr.qubits, pt.l)}). Matching pairs up ALL lit nodes at once so that the total path length is as small as possible: the fewest flips that explain the syndrome.${r.greedy ? " (Too many lit nodes for the exact search here: greedy pairing.)" : ""}` });
+        });
+        addCorr([...r.correction], pt.l);
+        steps.push({ title: `${tag}: correction`, ov: { focus: pt.kind, pairs: r.pairs, corr: snap() }, text: `Flip every qubit on the matched paths: ${qTxt(r.correction, pt.l)} (green rings). A qubit crossed twice is flipped twice, i.e. not at all.` });
+      } else {
+        const r = QDec.bposd(code, pt.set, pt.kind);
+        const b = r.bp, n = b.llr.length - 1;
+        steps.push({ title: `${tag}: belief propagation`, ov: { focus: pt.kind, bp: b, corr: snap() },
+          text: `Every qubit starts with the same small chance of having flipped (white). Each round, every ${pt.kind} check tells its qubits “one of you flipped” (lit) or “none or two of you did”, and every qubit adds up what it hears. Colour = BP's current chance that the qubit flipped; dashed blue ring = its current guess; × = your real error. Use the slider or Play below. ${b.converged ? `After <b>${b.iterations}</b> round${b.iterations > 1 ? "s" : ""} the guess explains the syndrome exactly: BP <span class="verdict ok">converged</span>.` : `After ${n} rounds the guess still leaves ${b.unsat[n]} check${b.unsat[n] === 1 ? "" : "s"} unexplained: BP <span class="verdict bad">did not converge</span> (the curve below shows it going round in circles).`}` });
+        if (r.osd) {
+          const avgP = r.avg.map((v) => 1 / (1 + Math.exp(Math.max(-50, Math.min(50, v)))));
+          const ranked = new Map(r.osd.order.slice(0, 8).map((q, i) => [q, i + 1]));
+          steps.push({ title: `${tag}: OSD rescue`, ov: { focus: pt.kind, avgProbs: avgP, ranked, corr: snap() },
+            text: `Ordered statistics decoding takes BP's beliefs <b>averaged over all ${n} rounds</b> (colours now: steadier than any single round) and sorts the qubits from “most likely flipped” to least; the first 8 are numbered. Then it solves the check equations exactly, allowing only the first ${r.osd.pivots.length} independent qubits in that order to flip. That always explains the syndrome, and BP's ranking makes it the probable answer.` });
+        }
+        addCorr([...r.correction], pt.l);
+        steps.push({ title: `${tag}: correction`, ov: { focus: pt.kind, corr: snap() }, text: `${r.osd ? "OSD's" : "BP's"} answer: flip ${qTxt(r.correction, pt.l)} (green rings).` });
+      }
+    });
+  }
+
+  // result: residual = error × correction (as Paulis, so X × Z = Y up to phase)
+  const residual = {};
+  for (let q = 0; q < code.n; q++) { const m = mul(err[q], corr[q]); if (m !== "I") residual[q] = m; }
+  const rs = syndrome(code, residual), rl = rs.map((v, i) => v ? i : -1).filter((i) => i >= 0);
+  const v = QDec.verdict(code, residual);
+  let text;
+  if (rl.length) text = `<span class="verdict bad">Not fixed.</span> What is left still lights ${sTxt(rl)}: the decoder could not explain the syndrome.`;
+  else if (v.kind === "exact") text = `<span class="verdict ok">Corrected exactly.</span> The decoder found precisely your error, so nothing is left.`;
+  else if (v.kind === "stabilizer") text = `<span class="verdict ok">Corrected.</span> The decoder did NOT find your exact error, but what is left (coloured qubits: your error times the correction) is a <b>stabilizer</b>, and stabilizers do nothing to the encoded state. Two different fixes, same result: this is <b>degeneracy</b>.`;
+  else text = `<span class="verdict bad">Logical error.</span> What is left lights no check, yet it is a logical operator: it flips ${v.flips.join(", ")}. The decoder picked the fix that was lighter or equally light${code.d ? ` (your error has weight ${errQ.length}; the distance is ${code.d}, so up to ${Math.floor((code.d - 1) / 2)} error${Math.floor((code.d - 1) / 2) === 1 ? " is" : "s are"} always safe)` : ""}, and its fix plus your error wraps all the way across the code.`;
+  steps.push({ title: "Result", ov: { residual, corr: snap() }, text, verdict: rl.length ? "unfixed" : v.kind });
+  return { dec, steps };
+}
+
+function decodeKey() { return [state.code.id, state.dec.decoder, JSON.stringify(state.err)].join("|"); }
+function ensureDecode() {
+  const key = decodeKey();
+  if (state.dec.key === key) return;
+  state.dec.key = key; state.dec.run = buildRun(); state.dec.step = 0; state.iter = 0; stopPlay();
+}
+function curStep() { const r = state.dec.run; return r ? r.steps[Math.min(state.dec.step, r.steps.length - 1)] : null; }
+
+function decodePanel() {
+  const code = state.code, opt = decoderOptions(code), run = state.dec.run, now = state.dec.step;
+  const errQ = Object.keys(state.err).map(Number).sort((a, b) => a - b);
+  let h = `<div class="section"><h3>Your error</h3>${errQ.length
+    ? `<div class="errlist">${errQ.map((q) => `<span class="errchip ${state.err[q]}">${state.err[q]}${SUB(q)}<button type="button" data-rm="${q}" aria-label="remove error on qubit ${q}">×</button></span>`).join("")}</div>`
+    : `<p class="small">Click qubits on the picture (I → X → Z → Y), or pick an example below.</p>`}</div>`;
+  h += `<div class="section"><h3>Decoder</h3><select id="decSel" aria-label="decoder"><option value="auto"${state.dec.decoder === "auto" ? " selected" : ""}>best available (${DEC_NAMES[chosenDecoder(code)] || "none"})</option>`;
+  Object.keys(DEC_NAMES).forEach((d) => { h += `<option value="${d}"${opt[d] ? " disabled" : ""}${state.dec.decoder === d ? " selected" : ""}>${DEC_NAMES[d]}${opt[d] ? " (not for this code)" : ""}</option>`; });
+  h += `</select>${Object.keys(DEC_NAMES).filter((d) => opt[d]).map((d) => `<p class="small" style="margin-top:4px"><b>${DEC_NAMES[d]}:</b> ${opt[d]}.</p>`).join("")}</div>`;
+  if (run) {
+    const st = run.steps[now];
+    h += `<div class="section"><h3>Step ${now + 1} of ${run.steps.length} · ${esc(st.title)}</h3><p class="steptext">${st.text}</p>
+      <div class="stepnav"><button class="chip" type="button" id="stepBack"${now === 0 ? " disabled" : ""}>← Back</button>
+      <button class="chip" type="button" id="stepNext"${now >= run.steps.length - 1 ? " disabled" : ""}>Next →</button>
+      <button class="chip" type="button" id="stepEnd"${now >= run.steps.length - 1 ? " disabled" : ""}>Result</button></div></div>`;
+    if (run.steps.length > 1) h += `<div class="section"><h3>All steps</h3><ol class="steps">${run.steps.map((s2, i) => `<li><button type="button" data-step="${i}" aria-current="${i === now}" class="${i > now ? "later" : ""}">${esc(s2.title)}</button></li>`).join("")}</ol></div>`;
+  }
+  h += `<div class="section"><h3>Examples</h3><div class="presets">${PRESETS.map((p, i) => `<button type="button" data-preset="${i}">${esc(p.label)}</button>`).join("")}</div></div>`;
+  return h;
+}
+function bindDecodePanel(box) {
+  const go = (i) => { state.dec.step = Math.max(0, Math.min(i, state.dec.run.steps.length - 1)); state.iter = 0; stopPlay(); render(); syncPlayer(); };
+  box.querySelectorAll("button[data-rm]").forEach((b) => (b.onclick = () => { delete state.err[+b.dataset.rm]; render(); }));
+  box.querySelectorAll("button[data-step]").forEach((b) => (b.onclick = () => go(+b.dataset.step)));
+  box.querySelectorAll("button[data-preset]").forEach((b) => (b.onclick = () => loadPreset(+b.dataset.preset)));
+  const sel = box.querySelector("#decSel"); if (sel) sel.onchange = (e) => { state.dec.decoder = e.target.value; render(); syncPlayer(); };
+  const bk = box.querySelector("#stepBack"), nx = box.querySelector("#stepNext"), en = box.querySelector("#stepEnd");
+  if (bk) bk.onclick = () => go(state.dec.step - 1);
+  if (nx) nx.onclick = () => go(state.dec.step + 1);
+  if (en) en.onclick = () => go(state.dec.run.steps.length - 1);
+}
+function loadPreset(i) {
+  const p = PRESETS[i];
+  const ci = ATLAS.codes.findIndex((c) => c.name === p.code);
+  selectCode(ci, true);
+  state.err = Object.assign({}, p.err); state.dec.decoder = p.decoder; state.dec.key = "";
+  render(); syncPlayer();
+}
+
+// BP iterations: slider + Play under the picture, and the unsatisfied-checks curve
+function syncPlayer() {
+  const st = state.view === "decode" ? curStep() : null;
+  const bp = st && st.ov.bp;
+  $("playerWrap").hidden = !bp;
+  if (!bp) { stopPlay(); return; }
+  const n = bp.probs.length - 1;
+  $("iterSlider").max = n; $("iterSlider").value = Math.min(state.iter, n); $("iterSlider").disabled = n === 0; $("playBtn").disabled = n === 0;
+  $("iterLabel").textContent = `round ${Math.min(state.iter, n)} / ${n} · ${bp.unsat[Math.min(state.iter, n)]} checks unexplained`;
+  drawSpark(bp);
+}
+function drawSpark(bp) {
+  const sp = $("spark"); sp.innerHTML = "";
+  const W = sp.clientWidth || 600, H = 70, pad = 6, n = bp.unsat.length, mx = Math.max(...bp.unsat, 1);
+  sp.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const x = (i) => pad + (W - 2 * pad) * i / Math.max(1, n - 1), y = (v) => H - pad - (H - 2 * pad) * v / mx;
+  el("polyline", { points: bp.unsat.map((v, i) => `${x(i)},${y(v)}`).join(" "), fill: "none", stroke: css("--muted"), "stroke-width": 1.5 }, sp);
+  const it = Math.min(state.iter, n - 1);
+  el("circle", { cx: x(it), cy: y(bp.unsat[it]), r: 4, fill: css("--lit") }, sp);
+}
+function stopPlay() { if (state.timer) { clearInterval(state.timer); state.timer = null; } $("playBtn").textContent = "Play"; }
+$("playBtn").onclick = () => {
+  if (state.timer) return stopPlay();
+  const st = curStep(); if (!st || !st.ov.bp) return;
+  $("playBtn").textContent = "Pause";
+  state.timer = setInterval(() => { const s2 = curStep(); if (!s2 || !s2.ov.bp) return stopPlay();
+    state.iter = (state.iter + 1) % s2.ov.bp.probs.length; drawBoard(); syncPlayer(); }, 450);
+};
+$("iterSlider").oninput = (e) => { state.iter = +e.target.value; drawBoard(); syncPlayer(); };
+
+// ---------- tabs and controls ----------
+["lattice", "tanner", "matrix", "written", "decode"].forEach((v) => {
+  $("tab-" + v).onclick = () => {
+    state.view = v;
+    document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.id === "tab-" + v)));
+    stopPlay(); render(); syncPlayer();
+  };
+});
+$("inspectBtn").onclick = () => {
+  state.inspect = !state.inspect; if (!state.inspect) state.sel = null;
+  $("inspectBtn").setAttribute("aria-pressed", String(state.inspect)); render();
+};
+["showX", "showZ", "showLabels", "showChains", "showAnc"].forEach((id) => ($(id).onchange = render));
+$("logSel").onchange = (e) => { state.logical = e.target.value || null; render(); };
+$("clearErr").onclick = () => { state.err = {}; render(); syncPlayer(); };
+$("resetView").onclick = () => { state.vb = null; render(); };
+
+// pan & zoom on the SVG viewBox
+(function panZoom() {
+  const svg = $("svg"); let drag = null;
+  const toUser = (ev) => { const r = svg.getBoundingClientRect(); const vb = state.vb;
+    const s = Math.max(vb[2] / r.width, vb[3] / r.height); const ox = vb[0] + (vb[2] - r.width * s) / 2, oy = vb[1] + (vb[3] - r.height * s) / 2;
+    return [ox + (ev.clientX - r.left) * s, oy + (ev.clientY - r.top) * s]; };
+  svg.addEventListener("wheel", (ev) => { ev.preventDefault(); const [ux, uy] = toUser(ev); const f = ev.deltaY > 0 ? 1.12 : 1 / 1.12;
+    const vb = state.vb; state.vb = [ux - (ux - vb[0]) * f, uy - (uy - vb[1]) * f, vb[2] * f, vb[3] * f]; svg.setAttribute("viewBox", state.vb.join(" ")); }, { passive: false });
+  svg.addEventListener("pointerdown", (ev) => { if (ev.target !== svg && ev.target.tagName !== "rect" && ev.target.tagName !== "g") return;
+    drag = { x: ev.clientX, y: ev.clientY, vb: state.vb.slice() }; svg.setPointerCapture(ev.pointerId); });
+  svg.addEventListener("pointermove", (ev) => { if (!drag) return; const r = svg.getBoundingClientRect();
+    const s = Math.max(drag.vb[2] / r.width, drag.vb[3] / r.height);
+    state.vb = [drag.vb[0] - (ev.clientX - drag.x) * s, drag.vb[1] - (ev.clientY - drag.y) * s, drag.vb[2], drag.vb[3]]; svg.setAttribute("viewBox", state.vb.join(" ")); });
+  svg.addEventListener("pointerup", () => { drag = null; });
+})();
+
+buildList();
+selectCode(ATLAS.codes.findIndex((c) => c.name.startsWith("surface (rotated) d=5")));
+</script>
