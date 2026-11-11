@@ -1,0 +1,118 @@
+# MkDocs configuration for the documentation website.
+#   pip install -r requirements-docs.txt
+#   mkdocs serve            -> http://127.0.0.1:8000
+#   mkdocs build --strict   -> site/
+# Published to GitHub Pages by .github/workflows/docs.yml.
+
+site_name: qdec · codes and decoders from scratch
+site_description: Quantum error-correcting codes built from their check matrices and geometry, decoded by decoders written from scratch, with every step drawn.
+site_author: Kanishka
+# TODO: set these two to your repository before publishing
+site_url: https://<your-username>.github.io/<this-repo>/
+# repo_url: https://github.com/<your-username>/<this-repo>
+# repo_name: <your-username>/<this-repo>
+
+docs_dir: docs
+hooks:
+  - docs_hooks.py            # copies notebooks/ and explorer/index.html into docs/ before each build
+
+theme:
+  name: material
+  features:
+    - navigation.tabs        # top-level sections as tabs
+    - navigation.sections
+    - navigation.top         # "back to top" button
+    - navigation.indexes
+    - search.highlight
+    - content.code.copy      # copy button on code blocks
+    - toc.follow
+  palette:                   # light / dark toggle
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle: { icon: material/weather-sunny, name: Light mode }
+  icon:
+    logo: material/grid
+
+nav:
+  - Home: index.md
+  - Getting started: GETTING_STARTED.md
+  - Use it:
+      - User guide: USER_GUIDE.md
+      - Explorer (opens the live page): explorer/index.html
+      - Code catalogue (theory): CODE_CATALOGUE.md
+  - Notebooks:
+      - 01 Codes, Tanner graph, BP: notebooks/01_codes_tanner_bp.ipynb
+      - 02 Code atlas: notebooks/02_code_atlas.ipynb
+      - 03 Jupyter widgets: notebooks/03_widgets_explorer.ipynb
+      - 04 Circuits and detector graphs: notebooks/04_circuits_and_detector_graphs.ipynb
+      - 05 Decoding pictures: notebooks/05_decoding_pictures.ipynb
+      - 06 Distance, logicals, written forms: notebooks/06_distance_logicals_written.ipynb
+      - 07 Live decoding: notebooks/07_live_decoding.ipynb
+  - Develop:
+      - Reading the code: CODE_GUIDE.md
+      - Architecture: ARCHITECTURE.md
+      - Developer reference: DEVELOPER_REFERENCE.md
+      - Tests: TESTS.md
+      - Part 1 reference (gf2, codes, tanner, bp): qdec_part1_reference.md
+      - Part 1 tests: qdec_part1_tests.md
+  - API reference:
+      - api/index.md
+      - qdec.gf2: api/gf2.md
+      - qdec.core: api/core.md
+      - qdec.families: api/families.md
+      - qdec.codes: api/codes.md
+      - qdec.views: api/views.md
+      - qdec.circuits: api/circuits.md
+      - qdec.dem: api/dem.md
+      - qdec.bp: api/bp.md
+      - qdec.decoders: api/decoders.md
+      - qdec.export: api/export.md
+      - qdec.tanner: api/tanner.md
+      - qdec.bp_viz: api/bp_viz.md
+      - qdec.widgets: api/widgets.md
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      execute: false           # show the saved outputs; building the site never runs the notebooks
+      include_source: true     # "download notebook" link on each page
+      ignore_h1_titles: true   # the nav title above is used instead of the notebook's first heading
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]           # find qdec/ at the repository root
+          options:
+            docstring_style: google
+            show_source: true          # "source code" expanders under each function
+            show_root_heading: false
+            members_order: source      # same order as in the file
+            filters: ["!^_"]           # hide private helpers (names starting with _)
+            heading_level: 2
+            merge_init_into_class: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:             # ```mermaid blocks become diagrams
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
