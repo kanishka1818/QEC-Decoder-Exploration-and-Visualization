@@ -18,10 +18,14 @@ StabilizerCode
   info        family, plain-language description, references, published distance, CNOT order ...
 ```
 
-This is the **symplectic form**: a Pauli on n qubits is a pair of bit vectors `(x | z)`, and two Paulis commute exactly when
-`x1·z2 + z1·x2 = 0 (mod 2)` ([Gottesman's thesis](https://arxiv.org/abs/quant-ph/9705052), ch. 3). That single formula covers CSS
-codes and non-CSS codes (the five-qubit code) alike. So everything downstream (pictures, circuits, syndromes, decoders, the explorer)
-is written once and works for all 16 codes.
+This is the **symplectic form**: a Pauli on $n$ qubits is a pair of bit vectors $(x \mid z)$, and two Paulis commute exactly when
+
+$$
+x_1 \cdot z_2 + z_1 \cdot x_2 = 0 \pmod 2
+$$
+
+([Gottesman's thesis](https://arxiv.org/abs/quant-ph/9705052), ch. 3). That one formula covers CSS and non-CSS codes alike, so
+pictures, circuits, syndromes and decoders are each written once and work for all 16 codes.
 
 ## 2. How the files depend on each other
 

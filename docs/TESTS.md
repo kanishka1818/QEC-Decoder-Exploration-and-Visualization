@@ -1,8 +1,8 @@
-# Test-suite reference (all parts)
+# Tests
 
-Run `python -m pytest -q tests/` from the folder root: **239 passed, 2 skipped**, about 50 s.
-(The skips: the repetition code's X-basis circuit, and matching on its non-existent X checks. Both have nothing to test.)
-Part 1 files (`test_codes.py`, `test_tanner.py`, `test_bp.py`, 46 tests) are described in `qdec_part1_tests.md`.
+Run `python -m pytest -q tests/` from the folder root: **239 passed, 2 skipped**, in about a minute. The two skips are the repetition
+code's missing $X$ checks. The first three files (`test_codes.py`, `test_tanner.py`, `test_bp.py`) are described in
+[Part 1 tests](qdec_part1_tests.md).
 
 ## `test_families.py` (68): is every code what the papers say?
 | test | proves |
@@ -80,6 +80,6 @@ The browser decoders (`explorer/decoders.js`) are run in **Node.js** on random e
 | `test_bp_beliefs_match_python` ×4 | rotated d=5, toric, BB72, gross: same LLR on every qubit at every iteration as `MinSumBP` (1e-9), same convergence and iteration count, 15 errors each |
 | `test_bposd_matches_python` ×4 | toric, BB72, gross, HGP(Hamming): same correction as `BPOSDDecoder(osd_order=0)`, 30 errors each; the gross run includes the explorer's oscillation example so the OSD branch is exercised |
 | `test_template_inlines_decoders` | the built page carries decoders.js inline (one self-contained file) |
-| `test_decode_tab_in_browser` | headless Chromium: every example in the Decode tab gives its stated decoder and verdict (exact / degeneracy / logical); every one of the 16 codes steps through all steps (BP slider moved) without a JavaScript error |
+| `test_decode_tab_in_browser` | headless Chromium: every example in the Decode tab gives its stated decoder and verdict (exact / degeneracy / logical); every one of the 16 codes steps through all steps (BP slider moved) without a JavaScript error; **Random error on this code** gives an error and steps on all 16 codes without changing the code; the theme button cycles light, dark, auto; a folded details section stays folded after a redraw |
 
 To make OSD deterministic in both languages, `BPOSDDecoder._osd` now sorts with `np.argsort(..., kind="stable")` (ties keep qubit order, as JavaScript's sort does).

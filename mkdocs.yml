@@ -4,13 +4,13 @@
 #   mkdocs build --strict   -> site/
 # Published to GitHub Pages by .github/workflows/docs.yml.
 
-site_name: qdec · codes and decoders from scratch
+site_name: QEC Decoder Exploration and Visualization
 site_description: Quantum error-correcting codes built from their check matrices and geometry, decoded by decoders written from scratch, with every step drawn.
 site_author: Kanishka
-# TODO: set these two to your repository before publishing
-site_url: https://<your-username>.github.io/<this-repo>/
-# repo_url: https://github.com/<your-username>/<this-repo>
-# repo_name: <your-username>/<this-repo>
+site_url: https://kanishka1818.github.io/QEC-Decoder-Exploration-and-Visualization/
+repo_url: https://github.com/kanishka1818/QEC-Decoder-Exploration-and-Visualization
+repo_name: kanishka1818/QEC-Decoder-Exploration-and-Visualization
+edit_uri: edit/main/docs/      # "edit this page" pencil on each page
 
 docs_dir: docs
 hooks:
@@ -97,7 +97,13 @@ plugins:
             heading_level: 2
             merge_init_into_class: true
 
+extra_javascript:               # equations: $...$ in the Markdown files, drawn by MathJax
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
 markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
   - admonition
   - attr_list
   - md_in_html

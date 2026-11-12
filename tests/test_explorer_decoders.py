@@ -172,14 +172,14 @@ def test_template_inlines_decoders(tmp_path):
 
 # ---------------------------------------------------------------- the Decode tab in a real browser
 EXPECTED_PRESETS = {                       # label prefix -> (decoder used, final verdict)
-    "Surface d=5 · three X errors": ("mwpm", "exact"),
-    "Surface d=5 · a different but equivalent": ("mwpm", "stabilizer"),      # degeneracy
-    "Surface d=5 · three on a line": ("mwpm", "logical"),
-    "Toric 4×4 · a tie that goes the wrong way": ("mwpm", "logical"),
-    "Toric 4×4 · BP freezes": ("bposd", "exact"),
-    "Steane · one Y error": ("lookup", "exact"),
-    "Five-qubit · non-CSS": ("lookup", "exact"),
-    "Gross · BP oscillates": ("bposd", "stabilizer"),
+    "Surface d=5: three X errors": ("mwpm", "exact"),
+    "Surface d=5: a different but equivalent": ("mwpm", "stabilizer"),      # degeneracy
+    "Surface d=5: three on a line": ("mwpm", "logical"),
+    "Toric 4×4: a tie that goes the wrong way": ("mwpm", "logical"),
+    "Toric 4×4: BP freezes": ("bposd", "exact"),
+    "Steane: one Y error": ("lookup", "exact"),
+    "Five-qubit: non-CSS": ("lookup", "exact"),
+    "Gross: BP oscillates": ("bposd", "stabilizer"),
 }
 
 
@@ -209,6 +209,22 @@ def test_decode_tab_in_browser(tmp_path):
             assert (dec, verdict) == want, label
             if "OSD" in label:
                 assert osd, "the OSD examples must show the OSD step"
+        # "Random error on this code" works on every code and never changes the code (the repetition-code report)
+        for ci in range(page.evaluate("ATLAS.codes.length")):
+            page.evaluate(f"selectCode({ci})")
+            page.click("#randErr")
+            assert page.evaluate("state.code.id") == page.evaluate(f"ATLAS.codes[{ci}].id")
+            assert page.evaluate("Object.keys(state.err).length") >= 1
+            assert page.evaluate("state.dec.run.steps.length") >= 2
+        # the theme button forces light, then dark, then goes back to the system setting
+        page.click("#themeBtn"); assert page.evaluate("document.documentElement.dataset.theme") == "light"
+        page.click("#themeBtn"); assert page.evaluate("document.documentElement.dataset.theme") == "dark"
+        page.click("#themeBtn"); assert page.evaluate("document.documentElement.dataset.theme") is None
+        # details sections fold, and stay folded after a redraw
+        page.click("details.sec summary >> text=About this code")
+        page.wait_for_timeout(100)                               # the browser reports the fold on its next tick
+        page.evaluate("render()")
+        assert page.evaluate("[...document.querySelectorAll('details.sec')].find(d => d.textContent.startsWith('About')).open") is False
         # every code, a Y and an X error, every step drawn (with the BP slider moved)
         for ci in range(page.evaluate("ATLAS.codes.length")):
             page.evaluate(f"selectCode({ci}); state.err = {{1: 'Y', 3: 'X'}}; render(); syncPlayer();")

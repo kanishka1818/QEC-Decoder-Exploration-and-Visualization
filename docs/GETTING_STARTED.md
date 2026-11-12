@@ -16,15 +16,12 @@ macOS and Linux unless a step says otherwise.
 ## 1. Get the code and build the environment
 
 ```bash
-git clone https://github.com/<your-username>/<this-repo>.git
-cd <this-repo>
+git clone https://github.com/kanishka1818/QEC-Decoder-Exploration-and-Visualization.git
+cd QEC-Decoder-Exploration-and-Visualization
 conda env create -f environment.yml      # creates the env "qec-decoders" (Python 3.12), takes a few minutes
 conda activate qec-decoders
 python -m ipykernel install --user --name qec-decoders   # so Jupyter lists this env as a kernel
 ```
-
-What the environment contains: numpy, scipy (exact fallback inside our MWPM), matplotlib, networkx, pillow (GIFs), pytest, JupyterLab,
-ipywidgets, and from pip: **stim** (runs our circuits), **sinter** (threshold sweeps), **pymatching** and **ldpc** (referees in the tests only).
 
 > **Windows:** run these in *Anaconda Prompt*. If your path has spaces, quote it: `cd "C:\Users\me\My Projects\qdec"`.
 
@@ -36,8 +33,7 @@ Updating an existing environment after `environment.yml` changes: `conda env upd
 python -m pytest -q tests/
 ```
 
-Expected: **239 passed, 2 skipped** in about a minute. (The two skips are by design: the repetition code has no X checks, so its X-basis
-circuit and its X-check matching graph have nothing to test.) If Node.js or Playwright is missing you will see more skips, not failures.
+Expected: **239 passed, 2 skipped** in about a minute. The two skips are by design. Without Node.js or Playwright you get more skips, not failures.
 
 Optional extras for the full suite:
 
@@ -58,10 +54,6 @@ python -m pytest -q -x --lf                         # stop at the first failure;
 ## 3. Open the explorer
 
 Double-click `explorer/index.html` (or drag it into a browser). It is one self-contained file and needs no server and no internet.
-
-* **Lattice**: click a qubit to cycle its error I → X → Z → Y. Lit checks turn amber; the panel says what your error does.
-* **Inspect** (button): click a face/check to see that stabilizer and its row in the matrix.
-* **Decode**: pick a decoder and step through Next / Back, or click an example.
 
 The full tour is in the [user guide](USER_GUIDE.md).
 
@@ -106,7 +98,7 @@ print(stim_distance(surface_rotated(21)))         # (21, 'exact (shortest path)'
 circuit = memory_circuit(code, rounds=5, p=0.003, basis="Z")   # a stim.Circuit
 ```
 
-More examples (your own code from check matrices, detector error models, decoding, Sinter sweeps): [user guide § 3](USER_GUIDE.md#3-using-the-package-in-your-own-code).
+More examples: [user guide](USER_GUIDE.md#the-package).
 
 ## 6. Rebuild the explorer after changing code
 
@@ -143,8 +135,7 @@ The workflow `.github/workflows/docs.yml` builds the site on every push to `main
 
 1. Push the repository to GitHub (public, or a paid plan for private Pages).
 2. On GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. In `mkdocs.yml`, set `site_url` and `repo_url` to your own (they are marked `TODO`).
-4. Push. The **Actions** tab shows the run; the site appears at `https://<your-username>.github.io/<this-repo>/`.
+3. Push. The **Actions** tab shows the run; the site appears at `https://kanishka1818.github.io/QEC-Decoder-Exploration-and-Visualization/`.
 
 If your default branch is not `main`, change `branches: [main]` at the top of the workflow.
 

@@ -124,35 +124,50 @@ Helpers: `symplectic_product(a, b, n)` (commutation table, 1 = anticommute) and 
 
 ## `explorer/`
 
-`template.html` holds the page source (CSS tokens with light/dark themes, vanilla JS, SVG drawing, `/*__ATLAS_DATA__*/null` placeholder).
-`index.html` is the built, self-contained file. The JS mirrors `views.py`: `nearest()`, `facePoints()`, symplectic `syndrome()`, and `isLogicalError()` for the lookup verdict.
+`template.html` is the page source. `decoders.js` holds the JavaScript decoders. `export.build_explorer_html` pastes the data
+(`/*__ATLAS_DATA__*/null`) and `decoders.js` (`/*__DECODERS_JS__*/`) into the template to make `index.html`, one self-contained file.
 
-Explorer update 1 (8 Nov 2026): implicit error cycling on click (`clickQubit`: I → X → Z → Y → I; an earlier mode toolbar was removed at Kanishka's request), one `Inspect` toggle (`state.inspect`) gating stabilizer selection, `drawAncillas()` (a 0/1 diamond per check = its ancilla qubit), `drawChains()` (errors of one type sharing a check of the other type are joined through it), `drawLogical()` (string polyline + label, or rings for scattered supports), `drawMatrix()` (HTML tables with sticky headers, syndrome column, clickable rows and columns), `drawWritten()` (sections from `code.written`, copy buttons), the inspector's stabilizer-vs-logical verdict when nothing lights, and a "different but equivalent correction" note for the lookup decoder.
+### `decoders.js` (global `QDec`; `module.exports` in Node)
 
-### Explorer update 2 (8 Nov 2026): live decoding
+Functions take the explorer's code dict (`gens[i] = {kind, support, letters}`, `logicals`, `lookup`). `kind` is the check type that
+sees the error: $Z$ checks see $X$ errors.
 
-**`explorer/decoders.js`** (global `QDec` in the browser, `module.exports` in Node). Plain functions on the explorer's code dict
-(`gens[i] = {kind, support, letters}`, `logicals`, `lookup`). `kind` = the check type that *sees* the error: Z checks see X errors.
-
-| function | returns | mirrors |
+| function | returns | Python counterpart |
 |---|---|---|
 | `rowsOf(code, kind)` | generator indices of that kind | `StabilizerCode.index_of` |
-| `splitError(err)` | `{x: Set, z: Set}` from `{q: 'X'/'Y'/'Z'}` (Y goes in both) | — |
+| `splitError(err)` | `{x: Set, z: Set}`; a Y goes in both | none |
 | `syndromeOf(code, rows, set)` | 0/1 per row | `H @ e % 2` |
-| `lookup(code, err)` | `{key, rows, correction}` (null correction = syndrome not in table) | `export.lookup_table` |
-| `isGraphLike(code, kind)` | every qubit in ≤ 2 checks of that kind | `circuits.stim_distance` test |
-| `mwpm(code, set, kind, p=0.05)` | `{lit, pairs:[{a, b|null, qubits}], correction, cost, hops, greedy, edges}` or `null` if not graph-like | `MatchingGraph.from_check_matrix` + `MWPMDecoder`: parallel edges merged (p₁(1−p₂)+p₂(1−p₁)), weight log((1−p)/p), Dijkstra (ties: smallest node first), subset DP up to 18 lit checks (greedy beyond, flagged) |
-| `bp(code, set, kind, p=0.05, maxIter=30, alpha=0.625)` | `{rows, syndrome, converged, iterations, llr[], guess[], unsat[], probs[]}` (index 0 = prior) | `bp.MinSumBP` |
-| `osd0(code, kind, s, llr)` | `{correction, pivots, order}` | `BPOSDDecoder._osd` with `osd_order=0` |
-| `bposd(...)` | `{bp, osd|null, avg|null, correction}`: OSD runs only if BP did not converge, ranking by the LLR averaged over iterations 1..end | `BPOSDDecoder.decode_error` |
-| `verdict(code, residual)` | `{kind: 'exact'|'stabilizer'|'logical', flips: ['X̄0', …]}` | `isLogicalError` |
+| `lookup(code, err)` | `{key, rows, correction}`; `null` correction if the syndrome is not in the table | `export.lookup_table` |
+| `isGraphLike(code, kind)` | true if every qubit is in at most 2 checks of that kind | the test in `circuits.stim_distance` |
+| `mwpm(code, set, kind, p=0.05)` | `{lit, pairs, correction, cost, hops, greedy, edges}`, or `null` if not graph-like | `MatchingGraph.from_check_matrix` + `MWPMDecoder` |
+| `bp(code, set, kind, p, maxIter, alpha)` | `{syndrome, converged, iterations, llr[], guess[], unsat[], probs[]}`; index 0 is the prior | `bp.MinSumBP` |
+| `osd0(code, kind, s, llr)` | `{correction, pivots, order}` | `BPOSDDecoder._osd`, order 0 |
+| `bposd(...)` | `{bp, osd, avg, correction}`; OSD runs only if BP did not converge | `BPOSDDecoder.decode_error` |
+| `verdict(code, residual)` | `{kind: 'exact' or 'stabilizer' or 'logical', flips}` | `isLogicalError` |
 
-**`template.html`, Decode tab.** `buildRun()` runs the chosen decoder on `state.err` and returns `{dec, steps}`; each step is
-`{title, text (HTML), ov, verdict?}`. `ov` (overlay) keys read by `drawBoard()`: `focus` (only that check type drawn), `graph` (matching
-edges, `drawGraph`), `pairs` + `pairNow` (`drawMatching`), `bp` (beliefs + guess rings at `state.iter`), `avgProbs` + `ranked` (OSD: top-8
-numbered), `corr` (green rings + letters), `residual` (the final step draws error × correction instead of the error). Steps are cached by
-`decodeKey()` = code id + decoder + errors; any change resets to step 1. `decoderOptions(code)` gives the reason a decoder cannot run
-(shown under the selector); `chosenDecoder()` resolves "best available" as lookup → MWPM → BP+OSD. `PRESETS` holds the eight examples
-(their verdicts are asserted in `test_decode_tab_in_browser`). `syncPlayer()` shows the BP round slider and the unsatisfied-checks curve
-only on a BP step. The build (`export.build_explorer_html`) replaces `/*__DECODERS_JS__*/` with the contents of `decoders.js`.
-The recorded `replays` are still in the data (used by tests and notebook 05) but no longer shown.
+`mwpm` merges parallel edges, weights them $\log\frac{1-p}{p}$, runs Dijkstra, and pairs exactly for up to 18 lit checks (greedy
+beyond that, flagged).
+
+### `template.html`
+
+| piece | what it does |
+|---|---|
+| `state` | current code, view, errors, selected check, decoder run, theme-independent UI state (`open`: which sections are folded open) |
+| `buildList()`, `GROUPS`, `groupOf()` | the code list as four folding groups; `selectCode` opens only the current group |
+| `clickQubit(q)` | cycles a qubit's error: I, X, Z, Y, I |
+| `render()` | redraws the current view, the legend and the details panel |
+| `drawBoard()` | the SVG: checks, error strings, lit checks, ancillas, logicals, qubits, and the current decoding step's overlay |
+| `drawLegend()` | the legend on the picture; lists only what is on screen |
+| `drawMatrix()`, `drawWritten()` | the Check matrix and How it's written tabs |
+| `renderInspector()`, `collapsify(box)` | the details panel; every `div.section` becomes a folding section |
+| `buildRun()` | runs the chosen decoder and returns `{dec, steps}`; each step is `{title, text, ov}` |
+| `decodePanel()`, `bindDecodePanel()` | the Decode tab's side panel: error, decoder, step, examples |
+| `randomError()` | a random error on the current code |
+| `decoderOptions()`, `chosenDecoder()` | which decoders can run on this code; "best available" is lookup, then MWPM, then BP + OSD |
+| `PRESETS`, `loadPreset(i)` | the eight examples; their results are asserted in the browser test |
+| `syncPlayer()`, `drawSpark()` | the BP round slider and the unexplained-checks curve, shown only on a BP step |
+| `setTheme(t)` | auto, light or dark, through `data-theme` on `<html>` |
+
+**Step overlays** (`ov`, read by `drawBoard`): `focus` (draw only that check type), `graph` (matching edges), `pairs` and `pairNow`
+(matched paths), `bp` (beliefs and guess at `state.iter`), `avgProbs` and `ranked` (OSD), `corr` (correction rings), `residual`
+(the last step draws error times correction).
